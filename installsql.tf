@@ -1,3 +1,7 @@
+resource "time_sleep" "wait_30_seconds_db" {
+  depends_on = [azurerm_linux_virtual_machine.atividade02-vm]
+  create_duration = "30s"
+}
 
 resource "null_resource" "upload_db" {
     provisioner "file" {
@@ -10,11 +14,12 @@ resource "null_resource" "upload_db" {
         source = "mysql"
         destination = "/home/azureuser"
     }
+    depends_on = [time_sleep.wait_30_seconds_db]
 }
 
 resource "null_resource" "install-mysql" {
     triggers = {
-        order = azurerm_linux_virtual_machine.atividade02-vm.id
+        order = null_resource.upload_db.id
     }
     provisioner "remote-exec" {
         connection {
@@ -27,8 +32,8 @@ resource "null_resource" "install-mysql" {
         inline = [
             "sudo apt-get update",
             "sudo apt-get install -y mysql-server-5.7",
-            "sudo mysql < /home/azureuser/config/user.sql",
-            "sudo cp -f /home/azureuser/config/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf",
+            "sudo mysql < /home/azureuser/mysql/config/user.sql",
+            "sudo cp -f /home/azureuser/mysql/config/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf",
             "sudo service mysql restart",
             "sleep 20",
         ]
